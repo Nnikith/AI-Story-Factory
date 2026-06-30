@@ -3,7 +3,7 @@ VENV=.venv
 PIP=$(VENV)/bin/pip
 PY=$(VENV)/bin/python
 
-.PHONY: setup bootstrap doctor start stop reset smoke demo scenes images voice subtitles render clean commit chmod
+.PHONY: setup bootstrap doctor start stop reset smoke demo scenes images voice subtitles render clean clean-output clean-cache clean-logs commit chmod zone
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -46,8 +46,17 @@ subtitles:
 render:
 	@if [ -f scripts/render_demo_video.py ]; then $(PY) scripts/render_demo_video.py; else $(PY) scripts/placeholder_render.py; fi
 
-clean:
-	rm -rf data/output/*
+clean-output:
+	find data/output -mindepth 1 ! -name ".gitkeep" -delete
+
+clean-cache:
+	find data/cache -mindepth 1 ! -name ".gitkeep" -delete
+
+clean-logs:
+	find data/logs -mindepth 1 ! -name ".gitkeep" -delete
+
+clean: zone clean-cache clean-logs
+	@echo "Clean complete."
 
 commit:
 	@if [ -z "$(MSG)" ]; then \
@@ -58,3 +67,6 @@ commit:
 
 chmod:
 	chmod +x scripts/*.sh
+
+zone:
+	find . -name "*:Zone.Identifier" -delete
