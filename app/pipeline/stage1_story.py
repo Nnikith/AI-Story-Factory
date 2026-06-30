@@ -32,10 +32,11 @@ def main() -> None:
     analysis = StoryAnalyzer().analyze(story_text)
 
     logger.info(
-        "Story analyzed: words=%s sentences=%s paragraphs=%s estimated_duration=%.2fs",
+        "Story analyzed: words=%s sentences=%s paragraphs=%s characters=%s estimated_duration=%.2fs",
         analysis.statistics.word_count,
         analysis.statistics.sentence_count,
         analysis.statistics.paragraph_count,
+        len(analysis.characters),
         analysis.statistics.estimated_duration_seconds,
     )
 
@@ -55,7 +56,7 @@ def main() -> None:
         timeline_path=TIMELINE_PATH,
     )
 
-    timeline = builder.build(planning_result)
+    timeline = builder.build(planning_result, characters=analysis.characters)
 
     TIMELINE_PATH.write_text(
         json.dumps(timeline, indent=2, ensure_ascii=False),

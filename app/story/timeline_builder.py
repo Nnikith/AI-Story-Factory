@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.scenes.models import ScenePlanningResult
+from app.story.models import StoryCharacter
 
 
 def now_utc() -> str:
@@ -22,7 +23,11 @@ class TimelineBuilder:
         self.input_story_path = input_story_path
         self.timeline_path = timeline_path
 
-    def build(self, planning_result: ScenePlanningResult) -> dict:
+    def build(
+        self,
+        planning_result: ScenePlanningResult,
+        characters: list[StoryCharacter] | None = None,
+    ) -> dict:
         scenes = [
             self._scene_to_timeline_dict(scene)
             for scene in planning_result.scenes
@@ -48,7 +53,7 @@ class TimelineBuilder:
                 "image_style": "cinematic anime fantasy",
                 "voice": "default",
             },
-            "characters": [],
+            "characters": [asdict(character) for character in characters or []],
             "scenes": scenes,
             "assets": {
                 "music": None,
