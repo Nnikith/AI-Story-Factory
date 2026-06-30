@@ -15,6 +15,7 @@ class RenderRequest:
     codec: str
     crf: int
     preset: str
+    motion_filters: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

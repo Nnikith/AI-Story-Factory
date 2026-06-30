@@ -71,3 +71,6 @@ logging:
 pipeline:
   continue_on_scene_failure: true
   resume_enabled: true
+motion:
+  provider: "ken_burns"
+  enabled: true

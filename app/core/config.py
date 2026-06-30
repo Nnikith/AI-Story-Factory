@@ -63,11 +63,17 @@ class AudioConfig(BaseModel):
     repo_id: str = "hexgrad/Kokoro-82M"
 
 
+class MotionConfig(BaseModel):
+    provider: str = "ken_burns"
+    enabled: bool = True
+
+
 class Config(BaseModel):
     render: RenderConfig
     subtitles: SubtitleConfig
     images: ImageConfig
     audio: AudioConfig
+    motion: MotionConfig
 
 
 def load_config(path: Path | None = None) -> Config:

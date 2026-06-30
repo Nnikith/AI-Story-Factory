@@ -6,6 +6,7 @@ from pathlib import Path
 from app.core.config import settings
 from app.core.logger import get_logger
 from app.core.timeline import Timeline
+from app.motion import MotionRequest, create_motion_provider
 from app.renderer import RenderRequest, create_video_renderer
 
 TIMELINE_PATH = Path("data/output/timeline.json")
@@ -15,12 +16,45 @@ VIDEO_PATH = Path("data/output/videos/demo.mp4")
 logger = get_logger("stage5_video")
 
 
+def _parse_resolution(resolution: str) -> tuple[int, int]:
+    width_text, height_text = resolution.lower().split("x", maxsplit=1)
+    return int(width_text), int(height_text)
+
+
+def _scene_id(scene: dict) -> str:
+    return str(scene.get("scene_id") or scene.get("id"))
+
+
 def run() -> None:
     logger.info("Starting Stage 5 video render")
     started_at = time.perf_counter()
 
     timeline = Timeline.load(TIMELINE_PATH)
     renderer = create_video_renderer("ffmpeg")
+
+    width, height = _parse_resolution(settings.render.resolution)
+    motion_filters: dict[str, str] = {}
+
+    if settings.motion.enabled:
+        motion_provider = create_motion_provider(settings.motion.provider)
+
+        for scene in timeline.scenes:
+            request = MotionRequest(
+                scene=scene,
+                width=width,
+                height=height,
+                fps=settings.render.fps,
+            )
+            result = motion_provider.build_filter(request)
+            motion_filters[result.scene_id] = result.filter_chain
+
+            scene.setdefault("motion_metadata", {})
+            scene["motion_metadata"].update(
+                {
+                    "provider": result.provider,
+                    **result.metadata,
+                }
+            )
 
     request = RenderRequest(
         timeline_data=timeline.data,
@@ -31,6 +65,7 @@ def run() -> None:
         codec=settings.render.codec,
         crf=settings.render.crf,
         preset=settings.render.preset,
+        motion_filters=motion_filters,
     )
 
     result = renderer.render(request)
