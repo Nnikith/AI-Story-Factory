@@ -70,3 +70,8 @@ chmod:
 
 zone:
 	find . -name "*:Zone.Identifier" -delete
+
+timeline:
+	$(PY) app/pipeline/stage1_story.py
+
+stage1: timeline
