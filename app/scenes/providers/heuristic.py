@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from app.prompts import ImagePromptRequest, create_image_prompt_provider
+from app.scenes.context import SceneContextAnalyzer
 from app.scenes.models import (
     PlannedScene,
     ScenePlanningRequest,
@@ -16,8 +17,13 @@ from app.story.models import StoryCharacter
 class HeuristicScenePlanner(ScenePlanner):
     provider_name = "heuristic"
 
-    def __init__(self, splitter: SceneSplitter | None = None) -> None:
+    def __init__(
+        self,
+        splitter: SceneSplitter | None = None,
+        context_analyzer: SceneContextAnalyzer | None = None,
+    ) -> None:
         self.splitter = splitter or SceneSplitter()
+        self.context_analyzer = context_analyzer or SceneContextAnalyzer()
 
     def plan(self, request: ScenePlanningRequest) -> ScenePlanningResult:
         scene_texts = self.splitter.split(
@@ -35,6 +41,7 @@ class HeuristicScenePlanner(ScenePlanner):
             start = round(current_time, 2)
             end = round(current_time + duration, 2)
             mood = "fantasy"
+            scene_context = self.context_analyzer.analyze(narration)
             scene_characters = self._assign_scene_characters(request, narration)
             character_prompts = self._get_character_visual_prompts(
                 request,
@@ -52,6 +59,9 @@ class HeuristicScenePlanner(ScenePlanner):
                     style=request.image_prompt_style,
                     character_prompts=character_prompts,
                     negative_character_prompts=negative_character_prompts,
+                    location=scene_context.location,
+                    time_of_day=scene_context.time_of_day,
+                    visual_focus=scene_context.visual_focus,
                 )
             )
 
@@ -66,12 +76,14 @@ class HeuristicScenePlanner(ScenePlanner):
                     image_prompt=prompt_result.prompt,
                     negative_prompt=prompt_result.negative_prompt,
                     characters=scene_characters,
-                    location=None,
+                    location=scene_context.location,
                     mood=mood,
                     camera={
                         "type": "slow_zoom_in",
                         "strength": 0.08,
                     },
+                    time_of_day=scene_context.time_of_day,
+                    visual_focus=scene_context.visual_focus,
                 )
             )
 

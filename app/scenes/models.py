@@ -30,6 +30,8 @@ class PlannedScene:
     location: str | None
     mood: str
     camera: dict[str, Any]
+    time_of_day: str | None = None
+    visual_focus: str | None = None
 
 
 @dataclass(frozen=True)

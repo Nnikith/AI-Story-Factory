@@ -11,6 +11,9 @@ class ImagePromptRequest:
     style: str = "cinematic anime fantasy"
     character_prompts: list[str] = field(default_factory=list)
     negative_character_prompts: list[str] = field(default_factory=list)
+    location: str | None = None
+    time_of_day: str | None = None
+    visual_focus: str | None = None
 
 
 @dataclass(frozen=True)

@@ -17,6 +17,15 @@ class DefaultImagePromptProvider(ImagePromptProvider):
             f"mood: {request.mood}",
         ]
 
+        if request.location:
+            prompt_parts.append(f"location: {request.location}")
+
+        if request.time_of_day:
+            prompt_parts.append(f"time of day: {request.time_of_day}")
+
+        if request.visual_focus:
+            prompt_parts.append(f"visual focus: {request.visual_focus}")
+
         if character_text:
             prompt_parts.append(f"characters: {character_text}")
 
@@ -38,6 +47,9 @@ class DefaultImagePromptProvider(ImagePromptProvider):
                 "style": request.style,
                 "mood": request.mood,
                 "character_prompt_count": len(request.character_prompts),
+                "has_location": request.location is not None,
+                "has_time_of_day": request.time_of_day is not None,
+                "has_visual_focus": request.visual_focus is not None,
             },
         )
 
