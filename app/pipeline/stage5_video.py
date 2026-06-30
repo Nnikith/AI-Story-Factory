@@ -5,13 +5,16 @@ import tempfile
 from pathlib import Path
 
 from app.core.config import settings
+from app.core.logger import get_logger
 from app.core.timeline import Timeline
-
+import time
 
 TIMELINE_PATH = Path("data/output/timeline.json")
 AUDIO_PATH = Path("data/output/audio/narration.wav")
 SUBTITLE_PATH = Path("data/output/subtitles/subtitles.srt")
 VIDEO_PATH = Path("data/output/videos/demo.mp4")
+
+logger = get_logger("stage5_video")
 
 
 def _scene_duration_seconds(scene: dict) -> float:
@@ -42,8 +45,10 @@ def _subtitle_filter() -> str:
 
 
 def run() -> None:
-    timeline = Timeline.load(TIMELINE_PATH)
+    logger.info("Starting Stage 5 video render")
+    started_at = time.perf_counter()
 
+    timeline = Timeline.load(TIMELINE_PATH)
     VIDEO_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -85,6 +90,7 @@ def run() -> None:
         if AUDIO_PATH.exists():
             cmd += ["-i", str(AUDIO_PATH), "-shortest"]
         else:
+            logger.warning("Missing narration audio, using silent fallback")
             cmd += [
                 "-f",
                 "lavfi",
@@ -111,8 +117,44 @@ def run() -> None:
             str(VIDEO_PATH),
         ]
 
-        print("Running:", " ".join(cmd))
-        subprocess.run(cmd, check=True)
+        logger.info("Running FFmpeg command: %s", " ".join(cmd))
+
+        try:
+            result = subprocess.run(
+                cmd,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            logger.error("FFmpeg failed with exit code %s", exc.returncode)
+            if exc.stdout:
+                logger.error("FFmpeg stdout: %s", exc.stdout)
+            if exc.stderr:
+                logger.error("FFmpeg stderr: %s", exc.stderr)
+            raise
+
+        if result.stdout:
+            logger.debug("FFmpeg stdout: %s", result.stdout)
+
+        if result.stderr:
+            logger.debug("FFmpeg stderr: %s", result.stderr)
+        
+
+        if result.stderr:
+            logger.debug(result.stderr)
+        
+        try:
+            result = subprocess.run(
+                cmd,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            logger.error("FFmpeg failed")
+            logger.error(exc.stderr)
+            raise
 
     for scene in timeline.scenes:
         scene.setdefault("status", {})["render"] = "done"
@@ -122,7 +164,8 @@ def run() -> None:
 
     timeline.save(TIMELINE_PATH)
 
-    print(f"Created video: {VIDEO_PATH}")
+    elapsed = time.perf_counter() - started_at
+    logger.info("Stage 5 complete: created video path=%s elapsed=%.2fs", VIDEO_PATH, elapsed)
 
 
 if __name__ == "__main__":

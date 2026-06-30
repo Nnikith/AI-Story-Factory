@@ -4,11 +4,14 @@ from pathlib import Path
 
 from pydub import AudioSegment
 
+from app.core.logger import get_logger
 from app.core.timeline import Timeline
-
+import time
 
 TIMELINE_PATH = Path("data/output/timeline.json")
 AUDIO_PATH = Path("data/output/audio/narration.wav")
+
+logger = get_logger("stage3_voice")
 
 
 def _scene_duration_seconds(scene: dict) -> float:
@@ -16,8 +19,10 @@ def _scene_duration_seconds(scene: dict) -> float:
 
 
 def run() -> None:
-    timeline = Timeline.load(TIMELINE_PATH)
+    logger.info("Starting Stage 3 placeholder voice generation")
+    started_at = time.perf_counter()
 
+    timeline = Timeline.load(TIMELINE_PATH)
     AUDIO_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     total_ms = int(
@@ -36,7 +41,13 @@ def run() -> None:
 
     timeline.save(TIMELINE_PATH)
 
-    print(f"Created placeholder silent narration: {AUDIO_PATH}")
+    elapsed = time.perf_counter() - started_at
+    logger.info(
+        "Stage 3 complete: created placeholder narration path=%s duration_ms=%s elapsed=%.2fs",
+        AUDIO_PATH,
+        total_ms,
+        elapsed,
+    )
 
 
 if __name__ == "__main__":

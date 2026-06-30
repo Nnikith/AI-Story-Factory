@@ -4,12 +4,15 @@ import os
 from pathlib import Path
 
 from app.core.config import settings
+from app.core.logger import get_logger
 from app.core.timeline import Timeline
 from app.images import ImageGenerationRequest, create_image_provider
 from app.images.cache import ImageCache
-
+import time
 
 TIMELINE_PATH = Path("data/output/timeline.json")
+
+logger = get_logger("stage2_images")
 
 
 def _parse_resolution(resolution: str) -> tuple[int, int]:
@@ -58,13 +61,22 @@ def _cache_extra() -> dict:
 
 
 def run() -> None:
+    logger.info("Starting Stage 2 image generation")
+    started_at = time.perf_counter()
     timeline = Timeline.load(TIMELINE_PATH)
-
-    # Important: create provider once so the local model loads once per Stage 2 run.
     provider = create_image_provider(settings.images.provider)
 
     width, height = _get_image_size()
     force = _get_force_enabled()
+
+    logger.info(
+        "Using image provider=%s resolution=%sx%s cache_enabled=%s force=%s",
+        provider.provider_name,
+        width,
+        height,
+        settings.images.cache_enabled,
+        force,
+    )
 
     output_dir = Path("data/output/images")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -95,15 +107,18 @@ def run() -> None:
 
         try:
             if cache_enabled and not force and image_cache.has(cache_key):
+                logger.info("Cache hit for %s", scene_id)
                 result = image_cache.restore(
                     cache_key=cache_key,
                     request=request,
                     provider=provider.provider_name,
                 )
             else:
+                logger.info("Cache miss for %s; generating image", scene_id)
                 result = provider.generate(request)
 
                 if cache_enabled:
+                    logger.info("Saving image cache for %s", scene_id)
                     image_cache.save(
                         cache_key=cache_key,
                         request=request,
@@ -133,7 +148,16 @@ def run() -> None:
                 }
             )
 
+            logger.info(
+                "Completed image for %s path=%s cached=%s",
+                scene_id,
+                result.image_path,
+                result.cached,
+            )
+
         except Exception as exc:
+            logger.exception("Image generation failed for %s", scene_id)
+
             scene.setdefault("status", {})["image"] = "failed"
             scene.setdefault("errors", [])
             scene["errors"].append(
@@ -145,6 +169,8 @@ def run() -> None:
             raise
 
     timeline.save(TIMELINE_PATH)
+    elapsed = time.perf_counter() - started_at
+    logger.info("Stage 2 complete: saved timeline=%s elapsed=%.2fs", TIMELINE_PATH, elapsed)
 
 
 if __name__ == "__main__":

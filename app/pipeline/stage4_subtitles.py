@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.core.logger import get_logger
 from app.core.timeline import Timeline
-
+import time
 
 TIMELINE_PATH = Path("data/output/timeline.json")
 SUBTITLE_PATH = Path("data/output/subtitles/subtitles.srt")
+
+logger = get_logger("stage4_subtitles")
 
 
 def _format_srt_time(seconds: float) -> str:
@@ -25,8 +28,10 @@ def _scene_duration_seconds(scene: dict) -> float:
 
 
 def run() -> None:
-    timeline = Timeline.load(TIMELINE_PATH)
+    logger.info("Starting Stage 4 subtitle generation")
+    started_at = time.perf_counter()
 
+    timeline = Timeline.load(TIMELINE_PATH)
     SUBTITLE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     current = 0.0
@@ -49,6 +54,13 @@ def run() -> None:
         scene["subtitle_end"] = end
         scene.setdefault("status", {})["subtitle"] = "done"
 
+        logger.info(
+            "Created subtitle block scene=%s start=%.2f end=%.2f",
+            scene.get("scene_id"),
+            start,
+            end,
+        )
+
         current = end
 
     SUBTITLE_PATH.write_text("\n".join(blocks), encoding="utf-8")
@@ -58,7 +70,8 @@ def run() -> None:
 
     timeline.save(TIMELINE_PATH)
 
-    print(f"Created subtitles: {SUBTITLE_PATH}")
+    elapsed = time.perf_counter() - started_at
+    logger.info("Stage 4 complete: created subtitles path=%s elapsed=%.2fs", SUBTITLE_PATH, elapsed)
 
 
 if __name__ == "__main__":
