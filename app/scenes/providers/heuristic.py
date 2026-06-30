@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from app.prompts import ImagePromptRequest, create_image_prompt_provider
 from app.scenes.models import (
     PlannedScene,
@@ -8,6 +10,7 @@ from app.scenes.models import (
 )
 from app.scenes.providers.base import ScenePlanner
 from app.scenes.splitter import SceneSplitter
+from app.story.models import StoryCharacter
 
 
 class HeuristicScenePlanner(ScenePlanner):
@@ -32,6 +35,7 @@ class HeuristicScenePlanner(ScenePlanner):
             start = round(current_time, 2)
             end = round(current_time + duration, 2)
             mood = "fantasy"
+            scene_characters = self._assign_scene_characters(request, narration)
 
             prompt_result = prompt_provider.build(
                 ImagePromptRequest(
@@ -51,7 +55,7 @@ class HeuristicScenePlanner(ScenePlanner):
                     end_seconds=end,
                     image_prompt=prompt_result.prompt,
                     negative_prompt=prompt_result.negative_prompt,
-                    characters=[],
+                    characters=scene_characters,
                     location=None,
                     mood=mood,
                     camera={
@@ -79,6 +83,35 @@ class HeuristicScenePlanner(ScenePlanner):
                     else 0
                 ),
             },
+        )
+
+    def _assign_scene_characters(
+        self,
+        request: ScenePlanningRequest,
+        narration: str,
+    ) -> list[str]:
+        if request.story_analysis is None:
+            return []
+
+        matched_ids = [
+            character.character_id
+            for character in request.story_analysis.characters
+            if self._character_appears(character, narration)
+        ]
+
+        return matched_ids
+
+    def _character_appears(
+        self,
+        character: StoryCharacter,
+        narration: str,
+    ) -> bool:
+        normalized = narration.lower()
+        candidates = [character.name, *character.aliases]
+
+        return any(
+            re.search(rf"\b{re.escape(candidate.lower())}\b", normalized)
+            for candidate in candidates
         )
 
     def _estimate_duration_seconds(self, narration: str) -> float:
