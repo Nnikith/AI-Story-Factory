@@ -33,25 +33,33 @@ class PlaceholderSubtitleProvider(SubtitleProvider):
                 current_time = scene_end
                 continue
 
-            block_duration = duration / len(chunks)
+            total_words = sum(_word_count(chunk) for chunk in chunks)
+
+            if total_words <= 0:
+                current_time = scene_end
+                continue
+
+            block_start = scene_start
 
             for chunk_index, chunk in enumerate(chunks):
-                start = scene_start + (chunk_index * block_duration)
-
                 if chunk_index == len(chunks) - 1:
-                    end = scene_end
+                    block_end = scene_end
                 else:
-                    end = scene_start + ((chunk_index + 1) * block_duration)
+                    proportion = _word_count(chunk) / total_words
+                    block_duration = duration * proportion
+                    block_end = block_start + block_duration
 
                 blocks.append(
                     SubtitleBlock(
                         index=global_index,
                         text=chunk,
-                        start_seconds=start,
-                        end_seconds=end,
+                        start_seconds=block_start,
+                        end_seconds=block_end,
                     )
                 )
+
                 global_index += 1
+                block_start = block_end
 
             current_time = scene_end
 
@@ -59,7 +67,7 @@ class PlaceholderSubtitleProvider(SubtitleProvider):
             blocks=blocks,
             provider=self.provider_name,
             metadata={
-                "mode": "readable_chunks",
+                "mode": "word_weighted_chunks",
                 "max_chars_per_line": request.max_chars_per_line,
                 "max_lines": request.max_lines,
             },
@@ -98,3 +106,7 @@ def _split_text(
         chunks.append(" ".join(current_words))
 
     return chunks
+
+
+def _word_count(text: str) -> int:
+    return len(text.split())
