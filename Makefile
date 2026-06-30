@@ -50,7 +50,11 @@ clean:
 	rm -rf data/output/*
 
 commit:
-	bash scripts/git_commit.sh "$(MSG)"
+	@if [ -z "$(MSG)" ]; then \
+		bash scripts/git_commit.sh; \
+	else \
+		bash scripts/git_commit.sh "$(MSG)"; \
+	fi
 
 chmod:
 	chmod +x scripts/*.sh
