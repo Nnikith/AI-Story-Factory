@@ -36,12 +36,22 @@ class HeuristicScenePlanner(ScenePlanner):
             end = round(current_time + duration, 2)
             mood = "fantasy"
             scene_characters = self._assign_scene_characters(request, narration)
+            character_prompts = self._get_character_visual_prompts(
+                request,
+                scene_characters,
+            )
+            negative_character_prompts = self._get_character_negative_prompts(
+                request,
+                scene_characters,
+            )
 
             prompt_result = prompt_provider.build(
                 ImagePromptRequest(
                     scene_text=narration,
                     mood=mood,
                     style=request.image_prompt_style,
+                    character_prompts=character_prompts,
+                    negative_character_prompts=negative_character_prompts,
                 )
             )
 
@@ -84,6 +94,45 @@ class HeuristicScenePlanner(ScenePlanner):
                 ),
             },
         )
+
+
+    def _get_character_visual_prompts(
+        self,
+        request: ScenePlanningRequest,
+        character_ids: list[str],
+    ) -> list[str]:
+        if request.story_analysis is None:
+            return []
+
+        character_lookup = {
+            character.character_id: character
+            for character in request.story_analysis.characters
+        }
+
+        return [
+            character_lookup[character_id].visual_prompt
+            for character_id in character_ids
+            if character_id in character_lookup
+        ]
+
+    def _get_character_negative_prompts(
+        self,
+        request: ScenePlanningRequest,
+        character_ids: list[str],
+    ) -> list[str]:
+        if request.story_analysis is None:
+            return []
+
+        character_lookup = {
+            character.character_id: character
+            for character in request.story_analysis.characters
+        }
+
+        return [
+            character_lookup[character_id].negative_prompt
+            for character_id in character_ids
+            if character_id in character_lookup
+        ]
 
     def _assign_scene_characters(
         self,

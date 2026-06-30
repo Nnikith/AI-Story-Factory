@@ -9,6 +9,8 @@ class ImagePromptRequest:
     scene_text: str
     mood: str = "fantasy"
     style: str = "cinematic anime fantasy"
+    character_prompts: list[str] = field(default_factory=list)
+    negative_character_prompts: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
