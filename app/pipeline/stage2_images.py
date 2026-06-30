@@ -45,8 +45,22 @@ def _build_prompt(scene: dict) -> str:
     return prompt
 
 
+def _cache_extra() -> dict:
+    return {
+        "style": settings.images.style,
+        "model_name": settings.images.model_name,
+        "model_path": settings.images.model_path,
+        "steps": settings.images.steps,
+        "guidance_scale": settings.images.guidance_scale,
+        "dtype": settings.images.dtype,
+        "device": settings.images.device,
+    }
+
+
 def run() -> None:
     timeline = Timeline.load(TIMELINE_PATH)
+
+    # Important: create provider once so the local model loads once per Stage 2 run.
     provider = create_image_provider(settings.images.provider)
 
     width, height = _get_image_size()
@@ -76,9 +90,7 @@ def run() -> None:
         cache_key = image_cache.build_key(
             request=request,
             provider=provider.provider_name,
-            extra={
-                "style": getattr(settings.images, "style", ""),
-            },
+            extra=_cache_extra(),
         )
 
         try:
@@ -98,7 +110,8 @@ def run() -> None:
                         result=result,
                         metadata={
                             "provider": provider.provider_name,
-                            "cache_enabled": cache_enabled,
+                            **_cache_extra(),
+                            **result.metadata,
                         },
                     )
 
@@ -115,6 +128,8 @@ def run() -> None:
                     "seed": result.seed,
                     "width": width,
                     "height": height,
+                    **_cache_extra(),
+                    **result.metadata,
                 }
             )
 

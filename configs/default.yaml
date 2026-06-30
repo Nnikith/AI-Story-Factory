@@ -37,29 +37,17 @@ audio:
   music_volume: 0.08
 
 images:
-  provider: "placeholder"
-
-  # Global style appended to every prompt
+  provider: "local_ai"
   style: "cinematic anime fantasy"
-
-  # Output resolution for generated images
-  width: 1920
-  height: 1080
-
-  # Generation settings
+  width: 1024
+  height: 576
   steps: 4
   guidance_scale: 0.0
   seed: 12345
-
-  # Runtime
   device: "cuda"
   dtype: "float16"
-
-  # Local model
   model_name: "sdxl-turbo"
-  model_path: "/home/nikith/Models/SDXL/sdxl-turbo"
-
-  # Cache
+  model_path: "stabilityai/sdxl-turbo"
   cache_enabled: true
   overwrite_existing: false
 
