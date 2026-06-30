@@ -11,4 +11,5 @@ PyYAML
 diffusers
 transformers
 accelerate
-safetensors
+safetensorskokoro>=0.9.4
+soundfile

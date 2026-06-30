@@ -53,6 +53,12 @@ class AudioConfig(BaseModel):
     voice_provider: str
     narration_volume: float = 1.0
     music_volume: float = 0.08
+    cache_enabled: bool = True
+    overwrite_existing: bool = False
+    sample_rate: int = 24000
+    voice_name: str = "af_heart"
+    model_name: str = "kokoro"
+    lang_code: str = "a"
 
 
 class Config(BaseModel):
