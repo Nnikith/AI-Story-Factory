@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import time
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from textwrap import wrap
+
 from app.core.logger import get_logger
-import time
+from app.scenes import ScenePlanningRequest, create_scene_planner
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -15,72 +17,45 @@ TIMELINE_PATH = OUTPUT_DIR / "timeline.json"
 
 logger = get_logger("stage1_story")
 
+
 def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def split_into_scenes(text: str, max_chars: int = 220) -> list[str]:
-    paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
-    chunks: list[str] = []
+def _scene_to_timeline_dict(scene) -> dict:
+    scene_data = asdict(scene)
 
-    for paragraph in paragraphs:
-        chunks.extend(wrap(paragraph, width=max_chars, break_long_words=False))
-
-    return chunks or ["No story content found."]
-
-
-def make_image_prompt(scene_text: str) -> str:
-    return (
-        "cinematic anime fantasy illustration, "
-        "high detail, dramatic lighting, "
-        f"scene: {scene_text}"
+    scene_data.update(
+        {
+            "image_path": f"data/output/images/{scene.scene_id}.png",
+            "audio_path": f"data/output/audio/{scene.scene_id}.wav",
+            "subtitle_text": scene.narration,
+            "subtitle_start": scene.start_seconds,
+            "subtitle_end": scene.end_seconds,
+            "status": {
+                "script": "done",
+                "image": "pending",
+                "voice": "pending",
+                "subtitle": "pending",
+                "render": "pending",
+            },
+        }
     )
+
+    return scene_data
 
 
 def build_timeline(story_text: str) -> dict:
-    scene_texts = split_into_scenes(story_text)
+    planner = create_scene_planner("heuristic")
 
-    scenes = []
-    current_time = 0.0
-
-    for index, narration in enumerate(scene_texts, start=1):
-        duration = max(5.0, min(10.0, len(narration) / 25))
-
-        scene_id = f"scene_{index:03d}"
-
-        scenes.append(
-            {
-                "scene_id": scene_id,
-                "order": index,
-                "duration_seconds": round(duration, 2),
-                "start_seconds": round(current_time, 2),
-                "end_seconds": round(current_time + duration, 2),
-                "narration": narration,
-                "image_prompt": make_image_prompt(narration),
-                "negative_prompt": "low quality, blurry, distorted, bad anatomy",
-                "characters": [],
-                "location": None,
-                "mood": "fantasy",
-                "image_path": f"data/output/images/{scene_id}.png",
-                "audio_path": f"data/output/audio/{scene_id}.wav",
-                "subtitle_text": narration,
-                "subtitle_start": round(current_time, 2),
-                "subtitle_end": round(current_time + duration, 2),
-                "camera": {
-                    "type": "slow_zoom_in",
-                    "strength": 0.08,
-                },
-                "status": {
-                    "script": "done",
-                    "image": "pending",
-                    "voice": "pending",
-                    "subtitle": "pending",
-                    "render": "pending",
-                },
-            }
+    planning_result = planner.plan(
+        ScenePlanningRequest(
+            story_text=story_text,
+            max_scene_chars=220,
         )
+    )
 
-        current_time += duration
+    scenes = [_scene_to_timeline_dict(scene) for scene in planning_result.scenes]
 
     return {
         "project": {
@@ -121,6 +96,10 @@ def build_timeline(story_text: str) -> dict:
             "errors": [],
             "warnings": [],
         },
+        "scene_planning_metadata": {
+            "provider": planning_result.provider,
+            **planning_result.metadata,
+        },
     }
 
 
@@ -140,7 +119,11 @@ def main() -> None:
     )
 
     elapsed = time.perf_counter() - started_at
-    logger.info("Stage 1 complete: created timeline=%s elapsed=%.2fs", TIMELINE_PATH, elapsed)
+    logger.info(
+        "Stage 1 complete: created timeline=%s elapsed=%.2fs",
+        TIMELINE_PATH,
+        elapsed,
+    )
 
 
 if __name__ == "__main__":
