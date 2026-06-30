@@ -74,3 +74,7 @@ pipeline:
 motion:
   provider: "ken_burns"
   enabled: true
+
+scene_planning:
+  provider: "heuristic"
+  max_scene_chars: 220

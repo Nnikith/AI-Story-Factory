@@ -63,6 +63,11 @@ class AudioConfig(BaseModel):
     repo_id: str = "hexgrad/Kokoro-82M"
 
 
+class ScenePlanningConfig(BaseModel):
+    provider: str = "heuristic"
+    max_scene_chars: int = 220
+
+
 class MotionConfig(BaseModel):
     provider: str = "ken_burns"
     enabled: bool = True
@@ -74,6 +79,7 @@ class Config(BaseModel):
     images: ImageConfig
     audio: AudioConfig
     motion: MotionConfig
+    scene_planning: ScenePlanningConfig
 
 
 def load_config(path: Path | None = None) -> Config:

@@ -6,6 +6,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.core.config import settings
 from app.core.logger import get_logger
 from app.scenes import ScenePlanningRequest, create_scene_planner
 
@@ -46,12 +47,12 @@ def _scene_to_timeline_dict(scene) -> dict:
 
 
 def build_timeline(story_text: str) -> dict:
-    planner = create_scene_planner("heuristic")
+    planner = create_scene_planner(settings.scene_planning.provider)
 
     planning_result = planner.plan(
         ScenePlanningRequest(
             story_text=story_text,
-            max_scene_chars=220,
+            max_scene_chars=settings.scene_planning.max_scene_chars,
         )
     )
 
