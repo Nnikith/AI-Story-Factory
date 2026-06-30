@@ -34,7 +34,6 @@ class PlaceholderSubtitleProvider(SubtitleProvider):
                 continue
 
             total_words = sum(_word_count(chunk) for chunk in chunks)
-
             if total_words <= 0:
                 current_time = scene_end
                 continue
@@ -46,13 +45,16 @@ class PlaceholderSubtitleProvider(SubtitleProvider):
                     block_end = scene_end
                 else:
                     proportion = _word_count(chunk) / total_words
-                    block_duration = duration * proportion
-                    block_end = block_start + block_duration
+                    block_end = block_start + (duration * proportion)
 
                 blocks.append(
                     SubtitleBlock(
                         index=global_index,
-                        text=chunk,
+                        text=_balance_lines(
+                            text=chunk,
+                            max_lines=request.max_lines,
+                            max_chars_per_line=request.max_chars_per_line,
+                        ),
                         start_seconds=block_start,
                         end_seconds=block_end,
                     )
@@ -67,7 +69,7 @@ class PlaceholderSubtitleProvider(SubtitleProvider):
             blocks=blocks,
             provider=self.provider_name,
             metadata={
-                "mode": "word_weighted_chunks",
+                "mode": "word_weighted_balanced_chunks",
                 "max_chars_per_line": request.max_chars_per_line,
                 "max_lines": request.max_lines,
             },
@@ -78,10 +80,7 @@ def _scene_duration_seconds(scene: dict) -> float:
     return float(scene.get("duration_seconds") or scene.get("duration") or 6.0)
 
 
-def _split_text(
-    text: str,
-    max_chars: int,
-) -> list[str]:
+def _split_text(text: str, max_chars: int) -> list[str]:
     words = text.split()
     if not words:
         return []
@@ -106,6 +105,46 @@ def _split_text(
         chunks.append(" ".join(current_words))
 
     return chunks
+
+
+def _balance_lines(
+    text: str,
+    max_lines: int,
+    max_chars_per_line: int,
+) -> str:
+    words = text.split()
+
+    if not words or max_lines <= 1 or len(text) <= max_chars_per_line // 2:
+        return text
+
+    target_lines = min(max_lines, 2)
+
+    if target_lines == 1:
+        return text
+
+    best_split_index = 1
+    best_score = float("inf")
+
+    for split_index in range(1, len(words)):
+        first = " ".join(words[:split_index])
+        second = " ".join(words[split_index:])
+
+        if len(first) > max_chars_per_line or len(second) > max_chars_per_line:
+            continue
+
+        score = abs(len(first) - len(second))
+
+        if score < best_score:
+            best_score = score
+            best_split_index = split_index
+
+    first = " ".join(words[:best_split_index])
+    second = " ".join(words[best_split_index:])
+
+    if not first or not second:
+        return text
+
+    return f"{first}\n{second}"
 
 
 def _word_count(text: str) -> int:
