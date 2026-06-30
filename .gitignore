@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# Outputs and cache
+data/output/
+data/generated/
+data/cache/
+data/logs/
+*.mp4
+*.wav
+*.mp3
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# Models
+models/
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.bin
+*.gguf
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temporary
+tmp/
+.temp/
+*.log

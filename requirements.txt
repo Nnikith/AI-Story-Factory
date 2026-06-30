@@ -1,0 +1,9 @@
+pydantic
+typer
+rich
+python-dotenv
+moviepy
+opencv-python
+pydub
+pysrt
+Pillow

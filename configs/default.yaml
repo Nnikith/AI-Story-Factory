@@ -1,0 +1,42 @@
+project:
+  name: AI Story Factory
+  version: 0.0.1
+
+paths:
+  input_dir: data/input
+  output_dir: data/output
+  cache_dir: data/cache
+  model_root: /home/nikith/Models
+
+render:
+  aspect_ratio: "16:9"
+  resolution: "1920x1080"
+  fps: 30
+  codec: "libx264"
+  crf: 23
+  preset: "veryfast"
+
+subtitles:
+  embed: true
+  font_name: "Arial"
+  font_size: 54
+  position: "bottom_center"
+  color: "white"
+  outline_color: "black"
+  max_lines: 3
+  max_chars_per_line: 42
+
+video:
+  target_duration_seconds: 60
+  average_scene_duration_seconds: 6
+  image_motion: true
+
+audio:
+  voice_provider: "placeholder"
+  narration_volume: 1.0
+  music_volume: 0.08
+
+images:
+  provider: "placeholder"
+  style: "cinematic anime fantasy"
+  cache_enabled: true
