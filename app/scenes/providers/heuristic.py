@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from textwrap import wrap
-
 from app.prompts import ImagePromptRequest, create_image_prompt_provider
 from app.scenes.models import (
     PlannedScene,
@@ -9,13 +7,17 @@ from app.scenes.models import (
     ScenePlanningResult,
 )
 from app.scenes.providers.base import ScenePlanner
+from app.scenes.splitter import SceneSplitter
 
 
 class HeuristicScenePlanner(ScenePlanner):
     provider_name = "heuristic"
 
+    def __init__(self, splitter: SceneSplitter | None = None) -> None:
+        self.splitter = splitter or SceneSplitter()
+
     def plan(self, request: ScenePlanningRequest) -> ScenePlanningResult:
-        scene_texts = _split_into_scenes(
+        scene_texts = self.splitter.split(
             request.story_text,
             max_chars=request.max_scene_chars,
         )
@@ -25,7 +27,7 @@ class HeuristicScenePlanner(ScenePlanner):
         current_time = 0.0
 
         for index, narration in enumerate(scene_texts, start=1):
-            duration = max(5.0, min(10.0, len(narration) / 25))
+            duration = self._estimate_duration_seconds(narration)
             scene_id = f"scene_{index:03d}"
             start = round(current_time, 2)
             end = round(current_time + duration, 2)
@@ -69,21 +71,9 @@ class HeuristicScenePlanner(ScenePlanner):
                 "scene_count": len(scenes),
                 "image_prompt_provider": request.image_prompt_provider,
                 "image_prompt_style": request.image_prompt_style,
+                "splitter": "sentence_aware",
             },
         )
 
-
-def _split_into_scenes(text: str, max_chars: int) -> list[str]:
-    paragraphs = [paragraph.strip() for paragraph in text.split("\n") if paragraph.strip()]
-    chunks: list[str] = []
-
-    for paragraph in paragraphs:
-        chunks.extend(
-            wrap(
-                paragraph,
-                width=max_chars,
-                break_long_words=False,
-            )
-        )
-
-    return chunks or ["No story content found."]
+    def _estimate_duration_seconds(self, narration: str) -> float:
+        return max(5.0, min(10.0, len(narration) / 25))
