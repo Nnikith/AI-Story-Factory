@@ -26,6 +26,7 @@ class SubtitleConfig(BaseModel):
     outline_color: str = "black"
     max_lines: int = 3
     max_chars_per_line: int = 42
+    provider: str = "placeholder"
 
 
 class ImageConfig(BaseModel):
