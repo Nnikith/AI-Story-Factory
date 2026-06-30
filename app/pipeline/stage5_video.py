@@ -2,19 +2,30 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 from app.core.config import settings
 from app.core.logger import get_logger
 from app.core.timeline import Timeline
-import time
 
 TIMELINE_PATH = Path("data/output/timeline.json")
-AUDIO_PATH = Path("data/output/audio/narration.wav")
 SUBTITLE_PATH = Path("data/output/subtitles/subtitles.srt")
 VIDEO_PATH = Path("data/output/videos/demo.mp4")
 
 logger = get_logger("stage5_video")
+
+
+def _audio_input_path(timeline: Timeline) -> Path | None:
+    if not timeline.scenes:
+        return None
+
+    audio = timeline.scenes[0].get("audio_path")
+    if not audio:
+        return None
+
+    path = Path(audio)
+    return path if path.exists() else None
 
 
 def _scene_duration_seconds(scene: dict) -> float:
@@ -49,6 +60,8 @@ def run() -> None:
     started_at = time.perf_counter()
 
     timeline = Timeline.load(TIMELINE_PATH)
+    audio_path = _audio_input_path(timeline)
+
     VIDEO_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -87,8 +100,8 @@ def run() -> None:
             str(concat_file),
         ]
 
-        if AUDIO_PATH.exists():
-            cmd += ["-i", str(AUDIO_PATH), "-shortest"]
+        if audio_path:
+            cmd += ["-i", str(audio_path), "-shortest"]
         else:
             logger.warning("Missing narration audio, using silent fallback")
             cmd += [
@@ -139,22 +152,6 @@ def run() -> None:
 
         if result.stderr:
             logger.debug("FFmpeg stderr: %s", result.stderr)
-        
-
-        if result.stderr:
-            logger.debug(result.stderr)
-        
-        try:
-            result = subprocess.run(
-                cmd,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-        except subprocess.CalledProcessError as exc:
-            logger.error("FFmpeg failed")
-            logger.error(exc.stderr)
-            raise
 
     for scene in timeline.scenes:
         scene.setdefault("status", {})["render"] = "done"
