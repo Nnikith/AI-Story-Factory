@@ -71,7 +71,13 @@ class HeuristicScenePlanner(ScenePlanner):
                 "scene_count": len(scenes),
                 "image_prompt_provider": request.image_prompt_provider,
                 "image_prompt_style": request.image_prompt_style,
-                "splitter": "sentence_aware",
+                "splitter": "narrative_beat",
+                "story_analysis_available": request.story_analysis is not None,
+                "detected_character_count": (
+                    len(request.story_analysis.characters)
+                    if request.story_analysis is not None
+                    else 0
+                ),
             },
         )
 

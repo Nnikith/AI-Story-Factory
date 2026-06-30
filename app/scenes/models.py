@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from app.story.models import StoryAnalysis
 
 
 @dataclass(frozen=True)
@@ -10,6 +13,7 @@ class ScenePlanningRequest:
     max_scene_chars: int = 220
     image_prompt_style: str = "cinematic anime fantasy"
     image_prompt_provider: str = "default"
+    story_analysis: StoryAnalysis | None = None
 
 
 @dataclass(frozen=True)
