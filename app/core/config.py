@@ -24,6 +24,9 @@ class ImageConfig(BaseModel):
     provider: str
     style: str
     cache_enabled: bool
+    width: int = 1920
+    height: int = 1080
+    seed: int | None = 12345
 
 
 class AudioConfig(BaseModel):

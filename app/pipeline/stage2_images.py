@@ -1,0 +1,136 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+from app.core.config import settings
+from app.core.timeline import Timeline
+from app.images import ImageGenerationRequest, create_image_provider
+from app.images.cache import ImageCache
+
+
+TIMELINE_PATH = Path("data/output/timeline.json")
+
+
+def _parse_resolution(resolution: str) -> tuple[int, int]:
+    width_text, height_text = resolution.lower().split("x", maxsplit=1)
+    return int(width_text), int(height_text)
+
+
+def _get_scene_id(scene: dict) -> str:
+    return str(scene.get("scene_id") or scene.get("id"))
+
+
+def _get_force_enabled() -> bool:
+    return os.getenv("FORCE", "0") == "1"
+
+
+def _get_image_size() -> tuple[int, int]:
+    configured_width = getattr(settings.images, "width", None)
+    configured_height = getattr(settings.images, "height", None)
+
+    if configured_width and configured_height:
+        return int(configured_width), int(configured_height)
+
+    return _parse_resolution(settings.render.resolution)
+
+
+def _build_prompt(scene: dict) -> str:
+    prompt = scene.get("image_prompt", "")
+    style = getattr(settings.images, "style", "")
+
+    if style:
+        return f"{prompt}, {style}"
+
+    return prompt
+
+
+def run() -> None:
+    timeline = Timeline.load(TIMELINE_PATH)
+    provider = create_image_provider(settings.images.provider)
+
+    width, height = _get_image_size()
+    force = _get_force_enabled()
+
+    output_dir = Path("data/output/images")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    cache_enabled = bool(getattr(settings.images, "cache_enabled", True))
+    image_cache = ImageCache(Path("data/cache"))
+
+    for scene in timeline.scenes:
+        scene_id = _get_scene_id(scene)
+        output_path = output_dir / f"{scene_id}.png"
+
+        request = ImageGenerationRequest(
+            scene_id=scene_id,
+            prompt=_build_prompt(scene),
+            negative_prompt=scene.get("negative_prompt", ""),
+            output_path=output_path,
+            width=width,
+            height=height,
+            seed=getattr(settings.images, "seed", None),
+            force=force,
+        )
+
+        cache_key = image_cache.build_key(
+            request=request,
+            provider=provider.provider_name,
+            extra={
+                "style": getattr(settings.images, "style", ""),
+            },
+        )
+
+        try:
+            if cache_enabled and not force and image_cache.has(cache_key):
+                result = image_cache.restore(
+                    cache_key=cache_key,
+                    request=request,
+                    provider=provider.provider_name,
+                )
+            else:
+                result = provider.generate(request)
+
+                if cache_enabled:
+                    image_cache.save(
+                        cache_key=cache_key,
+                        request=request,
+                        result=result,
+                        metadata={
+                            "provider": provider.provider_name,
+                            "cache_enabled": cache_enabled,
+                        },
+                    )
+
+            scene["image_path"] = str(result.image_path)
+            scene.setdefault("status", {})["image"] = (
+                "skipped" if result.cached else "done"
+            )
+            scene.setdefault("image_metadata", {})
+            scene["image_metadata"].update(
+                {
+                    "provider": result.provider,
+                    "cached": result.cached,
+                    "cache_key": cache_key,
+                    "seed": result.seed,
+                    "width": width,
+                    "height": height,
+                }
+            )
+
+        except Exception as exc:
+            scene.setdefault("status", {})["image"] = "failed"
+            scene.setdefault("errors", [])
+            scene["errors"].append(
+                {
+                    "stage": "stage2_images",
+                    "message": str(exc),
+                }
+            )
+            raise
+
+    timeline.save(TIMELINE_PATH)
+
+
+if __name__ == "__main__":
+    run()
