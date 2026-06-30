@@ -8,6 +8,8 @@ from typing import Any
 class ScenePlanningRequest:
     story_text: str
     max_scene_chars: int = 220
+    image_prompt_style: str = "cinematic anime fantasy"
+    image_prompt_provider: str = "default"
 
 
 @dataclass(frozen=True)

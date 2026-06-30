@@ -32,6 +32,8 @@ def main() -> None:
         ScenePlanningRequest(
             story_text=story_text,
             max_scene_chars=settings.scene_planning.max_scene_chars,
+            image_prompt_style=settings.prompts.image_style,
+            image_prompt_provider=settings.prompts.image_provider,
         )
     )
 

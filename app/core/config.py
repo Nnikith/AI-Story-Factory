@@ -63,6 +63,11 @@ class AudioConfig(BaseModel):
     repo_id: str = "hexgrad/Kokoro-82M"
 
 
+class PromptConfig(BaseModel):
+    image_provider: str = "default"
+    image_style: str = "cinematic anime fantasy"
+
+
 class ScenePlanningConfig(BaseModel):
     provider: str = "heuristic"
     max_scene_chars: int = 220
@@ -80,6 +85,7 @@ class Config(BaseModel):
     audio: AudioConfig
     motion: MotionConfig
     scene_planning: ScenePlanningConfig
+    prompts: PromptConfig
 
 
 def load_config(path: Path | None = None) -> Config:

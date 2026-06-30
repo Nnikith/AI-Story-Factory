@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from textwrap import wrap
 
+from app.prompts import ImagePromptRequest, create_image_prompt_provider
 from app.scenes.models import (
     PlannedScene,
     ScenePlanningRequest,
@@ -18,6 +19,7 @@ class HeuristicScenePlanner(ScenePlanner):
             request.story_text,
             max_chars=request.max_scene_chars,
         )
+        prompt_provider = create_image_prompt_provider(request.image_prompt_provider)
 
         scenes: list[PlannedScene] = []
         current_time = 0.0
@@ -27,6 +29,15 @@ class HeuristicScenePlanner(ScenePlanner):
             scene_id = f"scene_{index:03d}"
             start = round(current_time, 2)
             end = round(current_time + duration, 2)
+            mood = "fantasy"
+
+            prompt_result = prompt_provider.build(
+                ImagePromptRequest(
+                    scene_text=narration,
+                    mood=mood,
+                    style=request.image_prompt_style,
+                )
+            )
 
             scenes.append(
                 PlannedScene(
@@ -36,11 +47,11 @@ class HeuristicScenePlanner(ScenePlanner):
                     duration_seconds=round(duration, 2),
                     start_seconds=start,
                     end_seconds=end,
-                    image_prompt=_make_image_prompt(narration),
-                    negative_prompt="low quality, blurry, distorted, bad anatomy",
+                    image_prompt=prompt_result.prompt,
+                    negative_prompt=prompt_result.negative_prompt,
                     characters=[],
                     location=None,
-                    mood="fantasy",
+                    mood=mood,
                     camera={
                         "type": "slow_zoom_in",
                         "strength": 0.08,
@@ -56,6 +67,8 @@ class HeuristicScenePlanner(ScenePlanner):
             metadata={
                 "max_scene_chars": request.max_scene_chars,
                 "scene_count": len(scenes),
+                "image_prompt_provider": request.image_prompt_provider,
+                "image_prompt_style": request.image_prompt_style,
             },
         )
 
@@ -74,11 +87,3 @@ def _split_into_scenes(text: str, max_chars: int) -> list[str]:
         )
 
     return chunks or ["No story content found."]
-
-
-def _make_image_prompt(scene_text: str) -> str:
-    return (
-        "cinematic anime fantasy illustration, "
-        "high detail, dramatic lighting, "
-        f"scene: {scene_text}"
-    )

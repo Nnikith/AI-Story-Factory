@@ -78,3 +78,7 @@ motion:
 scene_planning:
   provider: "heuristic"
   max_scene_chars: 220
+
+prompts:
+  image_provider: "default"
+  image_style: "cinematic anime fantasy"
