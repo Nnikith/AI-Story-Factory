@@ -59,6 +59,7 @@ class AudioConfig(BaseModel):
     voice_name: str = "af_heart"
     model_name: str = "kokoro"
     lang_code: str = "a"
+    repo_id: str = "hexgrad/Kokoro-82M"
 
 
 class Config(BaseModel):

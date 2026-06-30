@@ -41,7 +41,8 @@ audio:
   voice_name: "af_heart"
   model_name: "kokoro"
   lang_code: "a"
-
+  repo_id: "hexgrad/Kokoro-82M"
+  
 images:
   provider: "local_ai"
   style: "cinematic anime fantasy"

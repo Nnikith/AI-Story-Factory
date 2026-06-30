@@ -39,7 +39,11 @@ def run() -> None:
     started_at = time.perf_counter()
 
     timeline = Timeline.load(TIMELINE_PATH)
-    provider = create_voice_provider(settings.audio.voice_provider)
+    provider = create_voice_provider(
+        settings.audio.voice_provider,
+        settings.audio,
+        )
+    
     force = _get_force_enabled()
 
     output_dir = Path("data/output/audio")
