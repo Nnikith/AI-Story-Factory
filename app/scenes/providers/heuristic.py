@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from textwrap import wrap
+import re
 
 from app.prompts import ImagePromptRequest, create_image_prompt_provider
 from app.scenes.models import (
@@ -9,13 +9,18 @@ from app.scenes.models import (
     ScenePlanningResult,
 )
 from app.scenes.providers.base import ScenePlanner
+from app.scenes.splitter import SceneSplitter
+from app.story.models import StoryCharacter
 
 
 class HeuristicScenePlanner(ScenePlanner):
     provider_name = "heuristic"
 
+    def __init__(self, splitter: SceneSplitter | None = None) -> None:
+        self.splitter = splitter or SceneSplitter()
+
     def plan(self, request: ScenePlanningRequest) -> ScenePlanningResult:
-        scene_texts = _split_into_scenes(
+        scene_texts = self.splitter.split(
             request.story_text,
             max_chars=request.max_scene_chars,
         )
@@ -25,11 +30,12 @@ class HeuristicScenePlanner(ScenePlanner):
         current_time = 0.0
 
         for index, narration in enumerate(scene_texts, start=1):
-            duration = max(5.0, min(10.0, len(narration) / 25))
+            duration = self._estimate_duration_seconds(narration)
             scene_id = f"scene_{index:03d}"
             start = round(current_time, 2)
             end = round(current_time + duration, 2)
             mood = "fantasy"
+            scene_characters = self._assign_scene_characters(request, narration)
 
             prompt_result = prompt_provider.build(
                 ImagePromptRequest(
@@ -49,7 +55,7 @@ class HeuristicScenePlanner(ScenePlanner):
                     end_seconds=end,
                     image_prompt=prompt_result.prompt,
                     negative_prompt=prompt_result.negative_prompt,
-                    characters=[],
+                    characters=scene_characters,
                     location=None,
                     mood=mood,
                     camera={
@@ -69,21 +75,44 @@ class HeuristicScenePlanner(ScenePlanner):
                 "scene_count": len(scenes),
                 "image_prompt_provider": request.image_prompt_provider,
                 "image_prompt_style": request.image_prompt_style,
+                "splitter": "narrative_beat",
+                "story_analysis_available": request.story_analysis is not None,
+                "detected_character_count": (
+                    len(request.story_analysis.characters)
+                    if request.story_analysis is not None
+                    else 0
+                ),
             },
         )
 
+    def _assign_scene_characters(
+        self,
+        request: ScenePlanningRequest,
+        narration: str,
+    ) -> list[str]:
+        if request.story_analysis is None:
+            return []
 
-def _split_into_scenes(text: str, max_chars: int) -> list[str]:
-    paragraphs = [paragraph.strip() for paragraph in text.split("\n") if paragraph.strip()]
-    chunks: list[str] = []
+        matched_ids = [
+            character.character_id
+            for character in request.story_analysis.characters
+            if self._character_appears(character, narration)
+        ]
 
-    for paragraph in paragraphs:
-        chunks.extend(
-            wrap(
-                paragraph,
-                width=max_chars,
-                break_long_words=False,
-            )
+        return matched_ids
+
+    def _character_appears(
+        self,
+        character: StoryCharacter,
+        narration: str,
+    ) -> bool:
+        normalized = narration.lower()
+        candidates = [character.name, *character.aliases]
+
+        return any(
+            re.search(rf"\b{re.escape(candidate.lower())}\b", normalized)
+            for candidate in candidates
         )
 
-    return chunks or ["No story content found."]
+    def _estimate_duration_seconds(self, narration: str) -> float:
+        return max(5.0, min(10.0, len(narration) / 25))
