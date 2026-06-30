@@ -7,3 +7,8 @@ opencv-python
 pydub
 pysrt
 Pillow
+PyYAML
+diffusers
+transformers
+accelerate
+safetensors

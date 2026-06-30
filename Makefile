@@ -3,7 +3,7 @@ VENV=.venv
 PIP=$(VENV)/bin/pip
 PY=$(VENV)/bin/python
 
-.PHONY: setup bootstrap doctor start stop reset smoke demo scenes images voice subtitles render clean commit chmod
+.PHONY: setup bootstrap doctor start stop reset smoke demo scenes images voice subtitles render clean clean-output clean-cache clean-logs commit chmod zone timeline stage1 stage2 stage3 stage4 stage5
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -28,26 +28,51 @@ reset:
 smoke:
 	bash scripts/smoke.sh
 
-demo: scenes images voice subtitles render
+demo: stage1 stage2 stage3 stage4 stage5
 	@echo "Demo pipeline complete."
 
-scenes:
-	$(PY) scripts/placeholder_scenes.py
+timeline:
+	$(PY) -m app.pipeline.stage1_story
 
-images:
-	$(PY) scripts/placeholder_images.py
+stage1: timeline
 
-voice:
-	$(PY) scripts/placeholder_voice.py
+scenes: stage1
 
-subtitles:
-	$(PY) scripts/placeholder_subtitles.py
+images: stage2
 
-render:
-	@if [ -f scripts/render_demo_video.py ]; then $(PY) scripts/render_demo_video.py; else $(PY) scripts/placeholder_render.py; fi
+stage2:
+	$(PY) -m app.pipeline.stage2_images
 
-clean:
-	rm -rf data/output/*
+voice: stage3
+
+stage3:
+	$(PY) -m app.pipeline.stage3_voice
+
+subtitles: stage4
+
+stage4:
+	$(PY) -m app.pipeline.stage4_subtitles
+
+render: stage5
+
+stage5:
+	$(PY) -m app.pipeline.stage5_video
+
+clean-output:
+	find data/output -mindepth 1 -delete
+	mkdir -p data/output/images data/output/audio data/output/subtitles data/output/videos data/output/metadata
+	touch data/output/.gitkeep
+
+clean-cache:
+	find data/cache -mindepth 1 -delete
+	touch data/cache/.gitkeep
+
+clean-logs:
+	find data/logs -mindepth 1 -delete
+	touch data/logs/.gitkeep
+
+clean: zone clean-cache clean-logs
+	@echo "Clean complete."
 
 commit:
 	@if [ -z "$(MSG)" ]; then \
@@ -58,3 +83,6 @@ commit:
 
 chmod:
 	chmod +x scripts/*.sh
+
+zone:
+	find . -name "*:Zone.Identifier" -delete
