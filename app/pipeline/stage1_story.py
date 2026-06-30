@@ -4,7 +4,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from textwrap import wrap
-
+from app.core.logger import get_logger
+import time
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -12,6 +13,7 @@ INPUT_STORY = ROOT / "data" / "input" / "story.txt"
 OUTPUT_DIR = ROOT / "data" / "output"
 TIMELINE_PATH = OUTPUT_DIR / "timeline.json"
 
+logger = get_logger("stage1_story")
 
 def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -123,6 +125,7 @@ def build_timeline(story_text: str) -> dict:
 
 
 def main() -> None:
+    started_at = time.perf_counter()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     if not INPUT_STORY.exists():
@@ -136,7 +139,8 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    print(f"Created {TIMELINE_PATH}")
+    elapsed = time.perf_counter() - started_at
+    logger.info("Stage 1 complete: created timeline=%s elapsed=%.2fs", TIMELINE_PATH, elapsed)
 
 
 if __name__ == "__main__":

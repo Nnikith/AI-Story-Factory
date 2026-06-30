@@ -1,6 +1,6 @@
 project:
   name: AI Story Factory
-  version: 0.0.1
+  version: "0.2.0"
 
 paths:
   input_dir: data/input
@@ -16,6 +16,11 @@ render:
   crf: 23
   preset: "veryfast"
 
+video:
+  target_duration_seconds: 60
+  average_scene_duration_seconds: 6
+  image_motion: true
+
 subtitles:
   embed: true
   font_name: "Arial"
@@ -26,17 +31,35 @@ subtitles:
   max_lines: 3
   max_chars_per_line: 42
 
-video:
-  target_duration_seconds: 60
-  average_scene_duration_seconds: 6
-  image_motion: true
-
 audio:
   voice_provider: "placeholder"
   narration_volume: 1.0
   music_volume: 0.08
 
 images:
-  provider: "placeholder"
+  provider: "local_ai"
   style: "cinematic anime fantasy"
+  width: 1024
+  height: 576
+  steps: 4
+  guidance_scale: 0.0
+  seed: 12345
+  device: "cuda"
+  dtype: "float16"
+  model_name: "sdxl-turbo"
+  model_path: "stabilityai/sdxl-turbo"
   cache_enabled: true
+  overwrite_existing: false
+
+cache:
+  enabled: true
+  prompt_hashing: true
+  skip_existing: true
+
+logging:
+  level: INFO
+  save_logs: true
+
+pipeline:
+  continue_on_scene_failure: true
+  resume_enabled: true
